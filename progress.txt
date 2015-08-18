@@ -1,0 +1,184 @@
+.SVS file viewer progress notes:
+
+4-14-15 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+Installed Python Imaging Library; It contains functions for reading and manipulating image files in Python. Default support for .TIFF and .JPEG, including a JPEG2000 library useful for working with .SVS stacks. I think I'll start as a command-line tool to open and re-package .svs stacks as single .TIFF images. 
+Want to make sure there is room in the code to expand and add functions later without restarting each time I want to take the application in a new direction.
+Beginning to experiment with file and image opening/closing statements and manipulating files within the Python environment. It is like LabVIEW opening and closing files and variables in memory. 
+
+Looking at a second library specifically for opening TIFF files because the documentation for PILLOW is goddamn confusing and I can't find anything that lets me manipulate TIFF stacks like I want to. It's possible I'll somehow need to use them together since I don't yet know if this new thing works for JPEG2000 compression even though that seems to be the standard, no one wants to implement it for OSX.
+
+So it looks like this library does everything I wanted to build, so I'll use it to make a nice wrapper program.
+**** Must install NumPy ****
+
+4-15-15 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+Installed a library developed by some guy at CMU for the specific purpose of viewing BioImage formats like pyramidal packed JPEGs. With OpenSlide, successfully opened and extracted the different leveled images from the raw SVS source file. This is the entire beginning goal, and it is just 3 lines of code. OpenSlide provides means to construct much more compelex applications that deal with these image files by implementing DeepZoom. I guess DeepZoom is a kind of toolbox to take advantage of the image stacks when zooming in and out in order to dramatically improve performance and memory usage. 
+
+Now the application is very simple, using Python as a scripting language. I want to eventually build a GUI interface upon this library, and even somehow support live image views. Strictly speaking, this likely won't be necessary but I hope to do two things with it. 1. Improve my GUI and large project development and bring it to a professional level, 2. Fill the need for a Mac friendly viewer for BioImaging formats like Aperio SVS. To my knowledge there is no way to view SVS files on Mac, except by renaming them with the file extension .TIFF, and even then behavior when opening these is unpredictable. 
+
+Ed Sheeran - I'm in Love With the CoCo 
+
+4-16-15 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+If this will ever work, I need to begin now with a class heirarchy. The libraries I have will be enough: OpenSlide together with Tkinter will let me develop the image viewing interactive GUI experience I desire. We already know how to make the mouse interact both with buttons and the TK canvas itself. Now the hurdle will be showing the loaded images as an interactive Tk object, without eating tons of memory. The challenge for me will be knowing enough about Python to conserve RAM, remembering that this problem exists in the first place because the image formats in question are very large, multi-leveled, and aliasing, or high down-sampling is often not an option from a diagnostic standpoint. 
+
+class ImageViewer
+	attributes: Tk canvas?
+
+	**** FUNCTIONS
+	__init__
+	ReadIm
+	ParseInputs
+	SaveIm
+	__main__
+
+Above&Beyond - You Gotta Go
+
+4-17-15 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+Worked through a tutorial on the Tkinter library for GUI functions. Buttons, containers, event listeners and handlers, etc. I think the best way for this to run would be like ImageJ - and for there to be one initial window with features, then opening an image would create a new window containing only the image stack. Then I would like the user to be able to navigate within the window: zoom, pan, crop, extract regions, etc. Basically it’s a copy of ImageJ in Python… that will only have a purpose for reading SVS files. Not the most inspired project ever but from where I stand it’s reasonably challenging yet doable.
+
+The first version will act as such:
+A text displaying window on top of three buttons: 'New Image', 'OK', 'Close'
+The text will at first be empty except for column headers for: 'Level', 'Size', 'Resolution', 'Compression', 'Other'
+Selecting an SVS file (and only an SVS file) from the New Image diologue will:
+	- Load the SVS image
+	- Parse the data associated with each column header, or display a 'N/A' if the data is hidden, inaccessible or missing.
+	- Generate columns of information for each level image in the stack.
+	- SETTINGS SELECTION:	
+		> Check-box next to each entry in the 'Level' column
+		> Selectable 'Any', or 'Other' for the size. Other has four boxes for defining an upper-left corner, and the height and width to crop.
+		> Entry box for the output filename. Default to the original filename with '_level x' appended and .tif file extension.
+		> ADVANCED SETTINGS:
+			>> Down sampling settings - use OpenSlide API
+This is all doable in about 5 lines in the console, so in order for this to be of any worth it's got to work very well, with no possibility of failing, and be fast. 
+For displaying I don't think we need Pillow until the image viewing aspect is ready to be implemented. For testing I will definitely need some smaller SVS files themselves. Maybe the ability to choose export to TIFF or SVS should be part of this package, since that's what the Windows Aperio software is able to do. 
+
+A class called SVSImage will be needed to keep track of the image data. There might be a problem with undrawing and redrawing all the text fields when a new image is selected. The user should be able to change images without saving anything. 
+
+* How to check if a selected path points to an SVS file. "OpenSlide.detect_format(cls, filename", "OpenSlide.properties"
+
+I will need help handling exceptions. The most obvious being the user selecting a non-SVS file. It will show as 'os.path.exists()'. I could grab the .SVS file extension. Maybe the best way is to let it try to open everything it's given and throw the error once that operation fails.
+
+Adam Sandler & Drew Barrymore - 50 First Dates
+Garfunkel and Oats
+
+4-18-15 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+Now is the time to decide how to handle things like displaying a preview of the image. The lowest level image might still be quite large, so maybe scale it. Grab the screen size and make sure the image doesn't display on more than 1/4 of the screen by area maybe. 
+
+
+2015 NBA Playoffs 1st Round: Wizards @ Raptors Game 1
+
+4-18-15 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+Yesterday got image preivew, the three buttons, metadata display and filepath entry box working. That's more or less all the core functions in the main window. Now I want to work on the Toplevel() TK window where image cropping functions can happen on a GUI level. Drag-drop to define a cropping window. Do I want there to be a bounding box that grows live with the mouse drag? I think that would just be a trigger on the MB-1 click to draw 4 new line objects with coordinates top-left: (origin of click), bottom-right: (current cursor position). What happens when the mouse leaves the window? The selection should always max out at the image dimensions. 
+For now: OnButtonClickOK:
+- New window shows with text fields for:
+	. Top, left corner - On the level 0 reference frame
+	. Crop height and width - On the level 0 reference frame
+	. Target level image.
+	. Output filepath
+- Background process the target level information and scale the other two fields to fit the level 0 reference frame. There is a method for reading a level's Magnification data that might help. Otherwise, assume Level0=20x, Level1=10x, Level2=5x.. ?
+- 
+
+Now I need to get into the actual development aspect: exception handling, throwing, avoidance. Creating custom descriptive exceptions and learning how to conditionally execute code when one of them happens. IE how to make my code fail gracefully.
+
+Writing routines for basic image processing like normalization can be separate .py files that will basically be an API or Library for the process. I don't know the difference between an "API" and a "Library", I think they're both ways to describe a collection of functions to do on a class. In this case, the class of object operable will be a PIL.Image, from Pillow. The pixel level operations will be the most valuable.
+
+Downloaded a package called MILK - a Python Machine Learning toolkit. This includes routines for SVM, K-means and RF classification. Numpy enables use of array objects in Python. MILK and Numpy are Python interfaces for C++ libraries. Looking around briefly, the syntax and class structuring is similar to Matlab implementation for RF and SVM classifiers. So I think that getting classification working quickly will not be much of a problem. I've got images loading, and selecting sections of them easily. Now I have to use Numpy to hold the image data as an array to do pixel operations on it. The next part of this project will be about porting the MATLAB routines to Python. This includes Color Normalization, Color Deconvolution, Features extraction (for H&E Intensity and for LBPxVAR features), and image output coloring and/or masking for further operations.
+
+Another possibility is porting the FRST routines into Python where they would run much faster, assuming the needed morphological and segmentation methods are available somewhere.
+
+Add a check-box to extract entire levels of the image. First figure out how to live-update the Entry box to go along with mouse click events.
+
+The ..4th, 5th, 6th, till the end of time'th thing to consider is all the metadata tagged with the SVS image. In OpenSlide.properties there is a dict of a shitload of properties about level dimensions, scanner type, owner, patient data, etc. This should either be completely discarded - ignored and never touched - or anonymized and re-saved along with whatever crops and extracted levels.
+
+Then after that will be to make EVERYTHING work with the DeepZoom package. Damn that might actually be a challenge and not just an exercise.
+
+http://xkcd.com/1513/ 	-"Code Quality"-
+
+4-20-15 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+Added click and drag to define a cropping region. Got translation between: (A)the display level image, (B)the selected target level and (C)the level0 image to work. Next will be to make the entered dimensions scale and update when the target level is changed. This is just the x and y sizes, as the top-corner is always the same since it stays in the level0 frame.  --(DONE)--
+
+Now the question is what candy can I build into this thing.
+I have to figure out how to force the PhotoImage object to somehow expand and take up all the space provided by the master. This might involve an Image.resize() operation. Also I think the way the image is displayed in the first place might be open for improvement. It should grab the lowest-level dimensions from the stack. Then a Tk Toplevel window should be created with a geometry attribute set to some factor of those dimensions, not bigger than the screen size. 
+
+Still need to implement the drawing of a rectangle object - or if it's easier - four line objects with common corners. I think rectangle would be better. Also to move forward - actually much later - It will need to check validity for filepaths etc. 
+
+2015 NBA Playoffs - Pelicans (0) @ Warriors (1) - Game 2
+
+4-21-15 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+Added live drawing box to the image. Had to convert the way the image was displayed from a Label widget to a Canvas image object. The Canvas is the goods though so I think it's all good. Now how to communicate from the main window, crop diologue box, delete the last drawn rectangle when the function is called. (DONE). 
+Now how to listen for updates to the 4 numbers enterable that define the cropping box and translate them to an updated rectangle on the Canvas. There is going to be some more scaling. x,y corner has to scale down to the display image level. The height and width must scale from the entered level (pull from the Entry widget) to the display level.. (DONE)
+
+Got preview rectangle to update properly when the Entry widgets are edited. Requires a <Return> press to call the function. Contents of the Entry widgets will update when the level is updated and <Return> is pressed. 
+
+I think another problem with processing whole slide sections is in microscopy's ability to visualize the entire field in sharp focus. Even within one slide section 10k x 10k pixels there is even a dirrerence in sharp focus. You could maybe do some high level classification to find areas of sharp focus and limit the lower-level processing to this mask. Outside of this, there has to be a routine to push one of these large files on a normal consumer level machine, with a normal amount of RAM say, 8, 12, 16 GB
+
+One way might be to set up a cropping routine that takes two neighboring sections, except each is over-sampled by a certain amount, so the edge is actually from part of the naturally neighboring tile. This is an attmpt to solve a problem in computer vision i.e. what to do when results on neighboring tiles are expected to be consistent from a human observer POV, but from a computer POV, the tiles are processed independently and therefore do not necessarily relate to one another. Only when the two sections features are computed from a window or some aggregative region from the image. For point operations this effect doesn't matter. So what I'm looking for is a way to link one tile to another so that the program can access whatever information is impactful to the operations being carried out. A success would be complete continuity when tiles are restitched after processing. 
+
+Start playing with the zoom and pan functions. How to let the user scroll around an image that is bigger than the screen...
+
+Starting to port colordeconvolution functions, next will be color normalization. Maybe I should do those first since I have a better idea how they work. Eh. Will use NumPy and/or SciPy (unsure of the difference between those..) heavily. You can do 3D logical masking with numpy. I think this might work for Matlab too but I've never tried it. Might be faster than operating on 3 channels of RGB arrays. 
+
+2015 NBA Playoffs - Celtics (0) @ Cavaliers (1) - Game 2
+
+4-23-15 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+Now using iPython Notebook to prototype Python code. It's especially useful to have independent sections of code and in-line images shown. While not quite as immersive as a true IDE, I feel like I haven't yet used all the most powerful features of the Notebook. Mostly it's a good way to document a workflow, especially at different stages of development and dismemberment. 
+
+2015 NBA Playoffs - Cavs (2) @ Celtics (0) - Game 3
+
+4-26-15 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+https://github.com/wnd-charm/wnd-charm
+
+Automated discrimination of lower and higher grade gliomas based on histopathological image analysis
+http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4382761/
+
+Automated Whole Slide Analysis of Differently Stained and Co-Registered Tissue Sections
+http://link.springer.com/chapter/10.1007/978-3-662-46224-9_70#page-1
+
+A multi-scale superpixel classification approach to the detection of regions of interest in whole slide histopathology images
+http://proceedings.spiedigitallibrary.org/proceeding.aspx?articleid=2210929
+
+Performance assessment of automated tissue characterization for prostate H and E stained histopathology
+http://proceedings.spiedigitallibrary.org/proceeding.aspx?articleid=2209868
+
+The Contribution of Morphological Features in the Classification of Prostate Carcinoma in Digital Pathology Images
+http://ieeexplore.ieee.org/xpl/login.jsp?tp=&arnumber=6977275&url=http%3A%2F%2Fieeexplore.ieee.org%2Fxpls%2Fabs_all.jsp%3Farnumber%3D6977275
+
+
+A HYBRID HUMAN-COMPUTER APPROACH FOR LARGE-SCALE IMAGE-BASED
+MEASUREMENTS USING WEB SERVICES AND MACHINE LEARNING
+http://www.bioimageanalysis.org/wp/wp-content/uploads/formidable/maree-isbi2014-final-preprint.pdf
+
+Computer-aided Prostate Cancer Diagnosis from Digitized Histopathology: A Review on Texture-based Systems
+http://ieeexplore.ieee.org/xpl/login.jsp?tp=&arnumber=6857992&url=http%3A%2F%2Fieeexplore.ieee.org%2Fxpls%2Fabs_all.jsp%3Farnumber%3D6857992
+
+Breast Cancer Histopathology Image Analysis:
+A Review
+http://www.math-info.univ-paris5.fr/~lomn/Cours/CV/BME/HistoPatho/LongPapers/TBMEHistopathoBreastImageProcessingReview2014.pdf
+
+
+4-28-15 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+Now I think is the time to come up with a plan for more features. After having taken a break from the GUI, I think it would be simple enough to add some low-level processing routines to it. 
+- Highlight, even suggest a cropping area for tissue, a.k.a. excluding background and any sharpie and labels on the slide.
+- Re-saving images with retained file-level metadata
+- Re-saving images as anonymized - i.e. strip only patient name and possibly facility & date from the file-level data
+- Test using a classifier with just RGB channel data for finding tissue/non-tissue.
+- Port a deconvolution code to work in Python
+- Complete the port of normalization code to properly handle lumen and - for some reason - not turn the stroma blue.
+	- Might test the code in the GUI itself.
+
+in MATLAB:
+- Set up the local hosting of between and cross-tile Histogram data ( just the row and columns ) Although if the border is wide enough I think that does the job for us.
+
+
+
+
+
+
+
+
+
+
+
+.
