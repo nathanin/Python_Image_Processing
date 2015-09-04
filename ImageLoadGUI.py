@@ -9,7 +9,7 @@ http://xkcd.com/1513/
 '''
 
 import os
-from openslide import OpenSlide, OpenSlideError
+from openslide import *
 from Tkinter import *
 import tkFileDialog
 import string

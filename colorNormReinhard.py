@@ -115,12 +115,12 @@ def colorNormReinhard(image):
 
 def NR_main():
     filepath = raw_input('File: ')
-    image = io.imread(filepath)
-
-    n = colorNormReinhard(image)
     filepath_out = raw_input("save name: ")
+    image = io.imread(filepath)
+    n = colorNormReinhard(image)
     io.imsave(filepath_out, n)
 
-NR_main()
+if __name__ == '__main__':
+    NR_main()
 
 
