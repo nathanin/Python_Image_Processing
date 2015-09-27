@@ -126,3 +126,7 @@ if __name__ == '__main__':
 	image = io.imread(filepath)
 	n = colorDeconvolution(image)
 	io.imsave(filepath_out, n)
+
+
+
+	
